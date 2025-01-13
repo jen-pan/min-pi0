@@ -8,7 +8,7 @@ from typing import Mapping, Optional, Tuple, Union
 import tensorflow as tf
 import logging
 
-import src.data.dlimp as dl
+import data.dlimp as dl
 
 log = logging.getLogger(__name__)
 

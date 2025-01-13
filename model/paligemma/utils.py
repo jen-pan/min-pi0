@@ -1,3 +1,6 @@
+'''
+Adapted from https://github.com/hkproj/pytorch-paligemma/blob/main/utils.py
+'''
 import glob
 import json
 import os

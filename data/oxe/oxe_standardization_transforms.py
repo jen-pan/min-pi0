@@ -16,7 +16,7 @@ from typing import Any, Dict
 
 import tensorflow as tf
 
-from src.data.utils.data_utils import (
+from data.utils.data_utils import (
     binarize_gripper_actions,
     invert_gripper_actions,
     rel2abs_gripper_actions,
