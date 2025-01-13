@@ -1,3 +1,6 @@
+'''
+Adapted from https://github.com/hkproj/pytorch-paligemma/blob/main/modeling_siglip.py
+'''
 from typing import Optional, Tuple
 
 import torch

@@ -7,7 +7,7 @@ import pickle
 import tensorflow as tf
 from huggingface_hub import hf_hub_download
 
-from src.data.utils.data_utils import to_padding
+from data.utils.data_utils import to_padding
 
 
 def delete_and_rephrase(

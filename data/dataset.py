@@ -1,8 +1,3 @@
-"""
-From: https://github.com/octo-models/octo/blob/main/octo/data/dataset.py
-
-"""
-
 import json
 import logging
 from functools import partial
@@ -12,10 +7,10 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
-import src.data.dlimp as dl
-from src.data import obs_transforms, traj_transforms
-from src.data.utils import goal_relabeling, task_augmentation
-from src.data.utils.data_utils import (
+import data.dlimp as dl
+from data import obs_transforms, traj_transforms
+from data.utils import goal_relabeling, task_augmentation
+from data.utils.data_utils import (
     NormalizationType,
     allocate_threads,
     get_dataset_statistics,
@@ -24,7 +19,7 @@ from src.data.utils.data_utils import (
     sample_match_keys_uniform,
     tree_map,
 )
-from src.utils.spec import ModuleSpec
+from data.utils.spec import ModuleSpec
 
 log = logging.getLogger(__name__)
 

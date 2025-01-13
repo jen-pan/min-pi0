@@ -7,7 +7,7 @@ from typing import Optional
 
 import tensorflow as tf
 
-from src.data.utils.data_utils import tree_merge
+from data.utils.data_utils import tree_merge
 
 
 def uniform(traj: dict, max_goal_distance: Optional[int] = None) -> dict:

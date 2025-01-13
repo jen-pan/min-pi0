@@ -10,7 +10,7 @@ import numpy as np
 import tensorflow as tf
 import tqdm
 
-import src.data.dlimp as dl
+import data.dlimp as dl
 
 log = logging.getLogger(__name__)
 

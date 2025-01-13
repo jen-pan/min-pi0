@@ -1,3 +1,6 @@
+'''
+Adapted from https://github.com/hkproj/pytorch-paligemma/blob/main/processing_paligemma.py
+'''
 from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 import numpy as np

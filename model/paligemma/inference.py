@@ -1,3 +1,6 @@
+'''
+Adapted from https://github.com/hkproj/pytorch-paligemma/blob/main/inference.py
+'''
 from PIL import Image
 import torch
 import fire

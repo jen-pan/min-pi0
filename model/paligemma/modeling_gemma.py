@@ -1,3 +1,6 @@
+'''
+Adapted from https://github.com/hkproj/pytorch-paligemma/blob/main/modeling_gemma.py
+'''
 import math
 from typing import Optional, Tuple
 
