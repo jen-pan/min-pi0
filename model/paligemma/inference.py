@@ -50,7 +50,6 @@ def test_inference(
 
     for _ in range(max_tokens_to_generate):
         # Get the model outputs
-        # TODO: remove the labels
         outputs = model(
             input_ids=input_ids,
             pixel_values=pixel_values,

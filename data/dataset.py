@@ -521,7 +521,6 @@ def make_interleaved_dataset(
         )
 
     # go through datasets once to get stats --- here the length is using the full split
-    # TODO(allenzren): pass in filter functions into make_dataset_from_rlds so the actual number of transitions in dataset_statistics are correct
     dataset_sizes = []
     all_dataset_statistics = {}
     for dataset_kwargs in dataset_kwargs_list:
@@ -532,7 +531,6 @@ def make_interleaved_dataset(
         ), f"Duplicate name {dataset_kwargs['name']}"
         all_dataset_statistics[dataset_kwargs["name"]] = dataset_statistics
 
-    # TODO(allenzren): account for actual dataset size instead of using full split length
     # balance and normalize weights
     if balance_weights:
         sample_weights = np.array(sample_weights) * np.array(dataset_sizes)

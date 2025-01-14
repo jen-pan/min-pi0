@@ -8,7 +8,7 @@ class BaseModelConfig:
     cache: bool
 
 @dataclass
-class MixtureConfig:
+class MultimodalConfig:
     image_text: BaseModelConfig = BaseModelConfig(
         hidden_size=2048,
         intermediate_size=16384,
@@ -30,7 +30,7 @@ class MixtureConfig:
 
 @dataclass
 class MoEConfig:
-    mixture: MixtureConfig
+    mixture: MultimodalConfig
     num_hidden_layers: int = 18
     num_attention_heads: int = 8
     num_key_value_heads: int = 1
@@ -44,14 +44,14 @@ class MoEConfig:
     
 @dataclass 
 class Pi0Config:
-    mixture: MixtureConfig
+    mixture: MultimodalConfig
     pretrained_model_path: str = "/Users/jenny/Documents/min-pi0/paligemma-3b-pt-224"  # path to pretrained PaLiGemma model
     image_token_index: int = 257152
     vocab_size: int = 257216
     pad_token_id: int = 0
     flow_sampling: str = "beta"
     num_inference_steps: int = 10
-    final_action_clip_value: float = 1.0  
+    action_clip_value: float = 1.0  
     num_proprio_tokens: int = 1
     num_action_tokens: int = 4
     action_dim: int = 7 
