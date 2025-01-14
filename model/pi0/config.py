@@ -9,7 +9,7 @@ class BaseModelConfig:
 
 @dataclass
 class MixtureConfig:
-    vlm: BaseModelConfig = BaseModelConfig(
+    image_text: BaseModelConfig = BaseModelConfig(
         hidden_size=2048,
         intermediate_size=16384,
         use_final_norm=False,

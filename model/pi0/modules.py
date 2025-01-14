@@ -146,7 +146,7 @@ class ModalBlock(nn.Module):
         
         return hidden_states, new_kv
 
-class ModalityStack(nn.Module):
+class ModalStack(nn.Module):
     """A stack of transformer layers that processes a specific modality (vision/text, or proprio/action)."""
     
     def __init__(self, config):
