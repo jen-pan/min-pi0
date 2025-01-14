@@ -66,13 +66,13 @@ class Pi0Processor(PaliGemmaProcessor):
             )
             for prompt in text
         ]
-
+        # outputs input_ids, attention_mask 
         inputs = self.tokenizer(
             input_strings,
             return_tensors="jax",
             max_length=self.max_seq_len,
             padding=self.tokenizer_padding,
             truncation=truncation,
-        )
+        ) 
         output = {"pixel_values": pixel_values, **inputs}
         return output
