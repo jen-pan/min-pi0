@@ -25,8 +25,7 @@ def process_images(
     images = (images - mean) / std
     return images
 
-
-class VLAProcessor(PaliGemmaProcessor):
+class Pi0Processor(PaliGemmaProcessor):
 
     def __init__(
         self,
