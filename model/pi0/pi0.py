@@ -102,7 +102,7 @@ class Pi0(nn.Module):
         
         for k, v in tensors.items():
             if 'language_model.model' in k:
-                new_key = k.replace('language_model.model.', 'multimodal.image_text.') #TODO: fix config
+                new_key = k.replace('language_model.model.', 'multimodal.image_text.') 
                 moe_state_dict[new_key] = v
                 
         self.moe.load_state_dict(moe_state_dict, strict=False)
