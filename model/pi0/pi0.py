@@ -292,6 +292,62 @@ class Pi0(nn.Module):
             action = jnp.clip(action, -self.action_clip_value, self.action_clip_value)
         return action
 
+    def autoregressive_discrete_action_prediction(
+        self,
+        input_ids: jnp.ndarray,
+        pixel_values: jnp.ndarray,
+        causal_mask: jnp.ndarray,
+        image_text_position_ids: jnp.ndarray,
+        proprio_position_ids: jnp.ndarray,
+        proprio: jnp.ndarray,
+        instruction: str,
+    ) -> None:
+        """
+        # following OpenVLA.predict_action()
+
+        # same image/text/proprio processing can be used here
+        image_text_proprio_mask, action_mask = self.split_causal_mask(causal_mask)
+        inputs_embeds = self.embed_vision_and_text(input_ids, pixel_values)
+        proprio_embeds = self.proprio_embedding(proprio)
+        _, kv_caches = self.moe(
+            attention_mask=image_text_proprio_mask,
+            input_idx={"image_text": image_text_position_ids, "proprio": proprio_position_ids},
+            input_embeddings={"image_text": inputs_embeds, "proprio": proprio_embeds},
+            return_caches=True,
+        )
+
+        # naive approach to creating a prompt conducive to autoregressive generation
+        prompt = f'role="human", message="What action should the robot take to {instruction.lower()}?"'
+        prompt_ids = self.tokenizer(prompt, add_special_tokens=False)["input_ids"]
+        input_ids = jnp.concatenate([input_ids, prompt_ids], axis=-1)
+        
+        # generate action tokens one at a time from Pi0 model
+        action_ids = self.generate(
+                input_ids=input_ids,                           
+                pixel_values=pixel_values,                     
+                max_new_tokens=self.num_action_tokens,
+                kv_caches=kv_caches,
+                **kwargs
+            )
+        # remove the vision patch predictions and keep only the action predictions
+        predicted_action_token_ids = action_ids[0, -self.num_image_and_text_tokens:]
+
+        # transform tokens back into continuous actions
+        normalized_actions = self.action_tokenizer.decode_token_ids_to_actions(predicted_action_token_ids.cpu().numpy())
+
+        # un-normalize actions, using q01/q99 instead of min/max makes the normalization more robust to outliers in the dataset, since extreme values will be clipped
+        action_norm_stats = self.get_action_stats(unnorm_key)
+        mask = action_norm_stats.get("mask", np.ones_like(action_norm_stats["q01"], dtype=bool))
+        action_high, action_low = np.array(action_norm_stats["q99"]), np.array(action_norm_stats["q01"])
+        actions = np.where(
+            mask,
+            0.5 * (normalized_actions + 1) * (action_high - action_low) + action_low,
+            normalized_actions,
+        )
+
+        return actions
+        """
+        pass
 
     ############################################################
     # Flow matching training
