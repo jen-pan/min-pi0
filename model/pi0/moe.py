@@ -1,6 +1,7 @@
 from typing import Dict, Tuple, Optional
 import flax.linen as nn
 import jax.numpy as jnp
+from omegaconf import OmegaConf
 from model.kv_cache import MultiModalKVCache
 from model.pi0.modules import ModalStack
 
@@ -14,7 +15,7 @@ def moe_layers(
     use_cache: bool = True,
     is_final_layer: bool = False,
 ) -> Dict[str, jnp.ndarray]:
-    """Forward pass through mixture layers."""
+    """Forward pass through layers."""
     modality_names = list(input_embeddings.keys())
     
     outputs = {}
@@ -49,11 +50,12 @@ class MoE(nn.Module):
         super().__init__()
         self.config = config
         self.num_hidden_layers = config.num_hidden_layers
-        self.cache_names = [name for name in config.mixture if config.mixture[name].cache]   
+        self.cache_names = [name for name in config.multimodal if config.multimodal[name].cache]   
 
         # init for each modality
         self.modality_stacks = {}
-        for modality_name, modality_config in config.mixture.items():
+        for modality_name, modality_config in config.multimodal.items():
+            modality_config = OmegaConf.merge(config, modality_config)
             self.modality_stacks[modality_name] = ModalStack(modality_config)
             
         # share weights between proprio and action stacks

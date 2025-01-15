@@ -1,63 +1,75 @@
 from typing import Optional, Tuple
 import glob
 import os
+from omegaconf import OmegaConf
 from safetensors import safe_open
 import jax
 import jax.numpy as jnp
 import flax.linen as nn
+import logging
 
 from model.pi0.moe import MoE
-from model.pi0.config import MultimodalConfig, MoEConfig, Pi0Config, VisionConfig, VisionProjectorConfig
 from model.paligemma.modeling_siglip import SiglipVisionModel, PaliGemmaMultiModalProjector
 from model.pi0.modules import ActionEmbedding, SinPosEmb
 
 class Pi0(nn.Module):
-    def __init__(self, cfg: Pi0Config, use_ddp: bool = False):
+    def __init__(self, config):
         super().__init__()
-        self.cfg = cfg
-        self.use_ddp = use_ddp  
-        self.vocab_size = cfg.vocab_size
-        self.pad_token_id = cfg.pad_token_id
-        self.image_token_index = cfg.image_token_index
+        self.config = config
+        self.vocab_size = config.vocab_size
+        self.pad_token_id = config.pad_token_id
+        self.image_token_index = config.image_token_index
 
-        self.max_image_text_tokens = cfg.max_image_text_tokens
-        self.num_proprio_tokens = cfg.num_proprio_tokens
-        self.num_action_tokens = cfg.num_action_tokens
+        self.max_image_text_tokens = config.max_image_text_tokens
+        self.num_proprio_tokens = config.num_proprio_tokens
+        self.num_action_tokens = config.num_action_tokens
         self.total_input_tokens = self.max_image_text_tokens + self.num_proprio_tokens + self.num_action_tokens
-        self.num_inference_steps = cfg.num_inference_steps  
+        self.num_inference_steps = config.num_inference_steps  
         
-        self.image_text_hidden_size = cfg.mixture.image_text.hidden_size
-        self.proprio_hidden_size = cfg.mixture.proprio.hidden_size
-        self.action_hidden_size = cfg.mixture.action.hidden_size
-        self.action_dim = cfg.action_dim
-        self.proprio_dim = cfg.proprio_dim
-        self.action_clip_value = cfg.action_clip_value
-        self.flow_sig_min = cfg.flow_sig_min
+        self.image_text_hidden_size = config.multimodal.image_text.hidden_size
+        self.proprio_hidden_size = config.multimodal.proprio.hidden_size
+        self.action_hidden_size = config.multimodal.action.hidden_size
+        self.action_dim = config.action_dim
+        self.proprio_dim = config.proprio_dim
+        self.action_clip_value = config.action_clip_value
+        self.flow_sig_min = config.flow_sig_min
 
-        vision_config = VisionConfig()
-        self.siglip = SiglipVisionModel(vision_config)
-        projector_config = VisionProjectorConfig()
-        self.multi_modal_projector = PaliGemmaMultiModalProjector(projector_config)
-        self.text_embedding = nn.Embed(cfg.vocab_size, self.image_text_hidden_size, self.pad_token_id)
+        # vision
+        vision_config = OmegaConf.to_container(config.siglip_model, resolve=True)
+        self.siglip = SiglipVisionModel(*vision_config)
+        projector_config = OmegaConf.to_container(config.multimodal_projector, resolve=True)
+        self.multi_modal_projector = PaliGemmaMultiModalProjector(*projector_config)
+
+        # language
+        self.text_embedding = nn.Embed(config.vocab_size, self.image_text_hidden_size, self.pad_token_id)
+
+        # robot-specific
         self.action_embedding = ActionEmbedding(self.action_hidden_size)
         self.time_embedding = SinPosEmb(self.action_hidden_size)
         self.proprio_embedding = nn.Dense(self.proprio_hidden_size)
         self.action_decoder = nn.Dense(self.action_dim)
 
-        mixture_config = MultimodalConfig()
-        moe_config = MoEConfig(mixture=mixture_config)
-        self.moe = MoE(moe_config)
-        self.moe.mixtures["proprio"] = self.moe.mixtures["action"]
+        moe_config = OmegaConf.to_container(config.moe, resolve=True)
+        self.moe = MoE(*moe_config)
+        self.moe.modality_stacks["proprio"] = self.moe.modality_stacks["action"]
 
     def load_pretrained(self): 
         """Loads pretrained weights from PaLiGemma for vision, projector, and language model components into
         our model architecture."""
         
         tensors = {}
-        safetensors_path = os.path.join(self.cfg.pretrained_model_path, "*.safetensors")
+        safetensors_path = os.path.join(self.config.pretrained_model_path, "*.safetensors")
         for filepath in glob.glob(safetensors_path):
-            with safe_open(filepath, framework="flax", device="cpu") as f:
-                tensors.update({k: f.get_tensor(k) for k in f.keys()})
+            f = None
+            try:
+                from safetensors.flax import load_file
+                tensors.update(load_file(filepath))
+            except Exception as e:
+                logging.error(f"Failed to load safetensors file {filepath}: {e}")
+                raise
+            finally:
+                if f is not None:
+                    f.close()
 
         components = {
             'embed_tokens': {
@@ -102,15 +114,15 @@ class Pi0(nn.Module):
 
     @property
     def action_expert_parameters(self):
-        # action and proprio share weights, so don't add mixtures['action']
+        # action and proprio share weights, so don't add modality_stacks['action']
         return (list(self.action_embedding.parameters()) + list(self.proprio_embedding.parameters())
-            + list(self.moe.mixtures["proprio"].parameters()) + list(self.action_decoder.parameters()))  
+            + list(self.moe.modality_stacks["proprio"].parameters()) + list(self.action_decoder.parameters()))  
 
     @property
     def trainable_vlm_parameters(self):
         # don't train text embedding, do train vision encoder (openVLA showed it was better to not freeze)
         return (list(self.siglip.parameters()) + list(self.multi_modal_projector.parameters())
-            + [param for _, param in self.moe.mixtures["image_text"].named_parameters()]
+            + [param for _, param in self.moe.modality_stacks["image_text"].named_parameters()]
         ) 
 
     ############################################################
@@ -238,10 +250,8 @@ class Pi0(nn.Module):
             attention_mask=image_text_proprio_mask,
             input_idx={"image_text": image_text_position_ids, "proprio": proprio_position_ids},
             input_embeddings={"image_text": inputs_embeds, "proprio": proprio_embeds},
-            kv_caches=self.moe.build_mixture_caches(),
             return_caches=True,
         )
-
         # sample action noise
         key = jax.random.PRNGKey(0)
         action = jax.random.normal(
