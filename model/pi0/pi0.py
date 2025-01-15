@@ -240,11 +240,11 @@ class Pi0(nn.Module):
         image_text_position_ids: jnp.ndarray,
         proprio_position_ids: jnp.ndarray,
         action_position_ids: jnp.ndarray,
-        proprios: jnp.ndarray,
+        proprio: jnp.ndarray,
     ) -> jnp.ndarray:
         image_text_proprio_mask, action_mask = self.split_causal_mask(causal_mask)
         inputs_embeds = self.embed_vision_and_text(input_ids, pixel_values)
-        proprio_embeds = self.proprio_embedding(proprios)
+        proprio_embeds = self.proprio_embedding(proprio)
         # forward pass thru image_text and proprio, cache the kv
         _, kv_caches = self.moe(
             attention_mask=image_text_proprio_mask,
@@ -314,31 +314,31 @@ class Pi0(nn.Module):
         input_ids: jnp.ndarray,
         pixel_values: jnp.ndarray,
         causal_mask: jnp.ndarray,
-        image_text_position_ids: jnp.ndarray,
-        proprio_position_ids: jnp.ndarray,
-        action_position_ids: jnp.ndarray,
-        proprios: jnp.ndarray,
-        actions: jnp.ndarray,
+        image_text_idx: jnp.ndarray,
+        proprio_idx: jnp.ndarray,
+        action_idx: jnp.ndarray,
+        proprio: jnp.ndarray,
+        action: jnp.ndarray,
         t: jnp.ndarray,
     ) -> jnp.ndarray:
-        """Training forward pass implementing flow matching loss."""
+        """training forward pass implementing flow matching loss."""
         # [batch_size, action_tokens, action_dim]
         key = jax.random.PRNGKey(42)
-        p = jax.random.normal(key, actions.shape, dtype=actions.dtype)
-        q = actions
+        p = jax.random.normal(key, action.shape, dtype=action.dtype)
+        q = action
         # create noisy action between p and q with chosen time t
         psi_t = self.time_linear_interpolation(p, q, t)  
 
         input_embedding = self.embed_vision_and_text(input_ids, pixel_values)
-        proprio_embedding = self.proprio_embedding(proprios)
+        proprio_embedding = self.proprio_embedding(proprio)
         time_embedding = self.time_embedding(t)
         action_embedding = self.action_embedding(psi_t, time_embedding)
         action_embedding = self.moe(
             attention_mask=causal_mask,
             input_idx={
-                "image_text": image_text_position_ids,
-                "proprio": proprio_position_ids,
-                "action": action_position_ids,
+                "image_text": image_text_idx,
+                "proprio": proprio_idx,
+                "action": action_idx,
             },
             input_embeddings={
                 "image_text": input_embedding,
