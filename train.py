@@ -350,7 +350,7 @@ def train(config_path: str):
     best_action_mse = float('inf')
     val_metrics_history = []
     
-    for epoch in range(int(cfg.n_epochs)): # TODO: check epochs wrt RLDS streaming ds
+    for epoch in range(int(cfg.n_epochs)): # TODO: check epochs wrt RLDS streaming dataset
         batch = next(train_data_iter)
         inputs = process_batch(batch)
         rng, step_rng = jax.random.split(rng)
@@ -369,7 +369,6 @@ def train(config_path: str):
             val_metrics_sum = {
                 'flow_loss': 0.0,
                 'action_mse': 0.0,
-                'action_mae': 0.0,
             }
             val_count = 0
             
@@ -391,7 +390,6 @@ def train(config_path: str):
                 wandb.log({
                     'val/flow_loss': avg_metrics['flow_loss'],
                     'val/action_mse': avg_metrics['action_mse'],
-                    'val/action_mae': avg_metrics['action_mae'],
                     'val/epoch': epoch,
                     'val/step': step,
                 })
